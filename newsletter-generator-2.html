@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prosper XO Newsletter Generator</title>
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-panel: #1e293b;
+      --bg-card: #334155;
+      --border-color: #475569;
+      --primary: #ffe94f;
+      --primary-hover: #facc15;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .app-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 500px;
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      background: #0f172a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sidebar-header h2 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .form-content {
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Draggable Section Card */
+    .section-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+      overflow: hidden;
+    }
+
+    .section-card.dragging {
+      opacity: 0.35;
+      transform: scale(0.98);
+      border: 2px dashed var(--primary);
+    }
+
+    .section-card.drag-over {
+      border-top: 3px solid var(--primary);
+      box-shadow: 0 -4px 10px rgba(255, 233, 79, 0.2);
+    }
+
+    .section-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(15, 23, 42, 0.65);
+      cursor: grab;
+      user-select: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .section-header-bar:active {
+      cursor: grabbing;
+    }
+
+    .section-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--primary);
+    }
+
+    .drag-handle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      cursor: grab;
+      line-height: 1;
+    }
+
+    .section-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-icon {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      border-radius: 4px;
+      padding: 3px 6px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      line-height: 1;
+      transition: all 0.15s;
+    }
+
+    .btn-icon:hover {
+      color: #fff;
+      border-color: var(--primary);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .section-body {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .section-body.collapsed {
+      display: none;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.5);
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .form-group label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--primary);
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="date"],
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 8px 12px;
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      color: #fff;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-group select { cursor: pointer; }
+    .form-group input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+    .form-group input[type="text"]:focus,
+    .form-group input[type="date"]:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--primary); }
+    .form-group textarea { resize: vertical; min-height: 65px; }
+
+    .speaker-card, .link-item-row {
+      border: 1px solid var(--border-color);
+      background: rgba(15, 23, 42, 0.7);
+      padding: 10px;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .speaker-card h5, .link-item-header {
+      font-size: 0.8rem;
+      color: var(--primary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .color-picker-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .color-picker-row .form-group { flex: 1; }
+
+    .color-picker-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .color-picker-wrapper input[type="color"] {
+      -webkit-appearance: none;
+      border: 1px solid var(--border-color);
+      width: 34px;
+      height: 34px;
+      border-radius: 6px;
+      cursor: pointer;
+      background: none;
+    }
+
+    .preview-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #000000;
+    }
+
+    .preview-toolbar {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-color);
+      padding: 8px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .iframe-container {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    iframe {
+      width: 100%;
+      max-width: 640px;
+      height: 100%;
+      border: none;
+      background: #f4f4f4;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .btn {
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      border-radius: 20px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-primary { background: var(--primary); color: #000; }
+    .btn-primary:hover { background: var(--primary-hover); }
+
+    .btn-secondary { background: var(--bg-card); color: #fff; border: 1px solid var(--border-color); }
+    .btn-secondary:hover { background: var(--border-color); }
+
+    .btn-add-section {
+      background: rgba(255, 233, 79, 0.05);
+      color: var(--primary);
+      border: 2px dashed var(--primary);
+      padding: 10px;
+      width: 100%;
+      font-size: 0.85rem;
+    }
+    .btn-add-section:hover { background: rgba(255, 233, 79, 0.15); }
+
+    .btn-danger { background: #ef4444; color: #fff; padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; }
+    .btn-danger:hover { background: #dc2626; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>⚡ XO Insider Email Generator</h1>
+    <div class="header-actions">
+      <button class="btn btn-secondary" onclick="copyHTML()">📋 Copy HTML</button>
+      <button class="btn btn-primary" onclick="downloadHTML()">💾 Download HTML</button>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h2>Sections &amp; Reordering</h2>
+        <span style="font-size: 0.75rem; color: var(--text-muted);">Drag ⋮⋮ or use ▲▼ to reorder</span>
+      </div>
+      <div class="form-content" id="form-controls"></div>
+    </div>
+
+    <div class="preview-area">
+      <div class="preview-toolbar">
+        <span>Live Preview</span>
+        <span id="status-text">Ready</span>
+      </div>
+      <div class="iframe-container">
+        <iframe id="preview-frame"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Ordered List of Sections in the Newsletter
+    let activeSections = [
+      { id: 'townhall', type: 'townhall', title: 'Header & Town Hall' },
+      { id: 'resource_month', type: 'resource_month', title: 'Resource of the Month' },
+      { id: 'atx_musicians', type: 'atx_musicians', title: 'ATX Musicians' },
+      { id: 'tala', type: 'tala', title: 'TALA' },
+      { id: 'sims', type: 'sims', title: 'SIMS Foundation' },
+      { id: 'haam', type: 'haam', title: 'HAAM' },
+      { id: 'artist_voices', type: 'artist_voices', title: 'Artist Voices Wall' },
+      { id: 'fuel_journey', type: 'fuel_journey', title: 'Fuel for the Journey' }
+    ];
+
+    let collapsedMap = {};
+    let draggedIndex = null;
+
+    // Town Hall Section State
+    let townHallData = {
+      image: 'https://prosperxo.com/assets/graphics/events/prosperxo-event-260708-1080x1440.jpeg',
+      lumaLink: 'https://luma.com/ju3d23tb',
+      date: 'July 8, 2026',
+      location: 'Capital Factory in Austin, TX • ACL Room, 16th floor',
+      sentences: [
+        "The music industry often celebrates breakthroughs, viral moments, and success stories; but what does it actually take to build a sustainable career over the long term?",
+        "Join Prosper XO for an evening exploring artist development, community, career sustainability, building a business, and the support systems that help artists grow, evolve, and thrive.",
+        "From artist management and record labels to nonprofit support and community infrastructure, we'll discuss the realities of building a lasting career in music, the challenges artists face along the way, and what it takes to create an ecosystem where artists can succeed not just for a moment; but for a lifetime."
+      ],
+      speakers: [
+        {
+          name: 'Justin Weems',
+          title: 'Founder, FSG | FSG Records',
+          img: 'https://prosperxo.com/assets/graphics/events/speaker-pics/justin-weems.jpeg',
+          description: ''
+        },
+        {
+          name: 'Aaron McDonnell',
+          title: 'Co-Owner, FSG Records | Artist',
+          img: 'https://prosperxo.com/assets/graphics/events/speaker-pics/arron-mcdonnel.jpg',
+          description: ''
+        },
+        {
+          name: 'Jazz Mills',
+          title: 'CEO, Free Lunch | Artist Manager | Artist',
+          img: 'https://prosperxo.com/assets/graphics/events/speaker-pics/jazz-mills.JPG',
+          description: ''
+        }
+      ],
+      rsvpLink: 'https://luma.com/ju3d23tb'
+    };
+
+    // Resource of the Month State
+    let resourceOfMonth = {
+      orgName: 'Conspirare',
+      imgUrl: 'https://prosperxo.com/assets/newsletter-preview/ProsperXO-Socia-ResourceofMonth-conspirare.jpg',
+      description: 'Conspirare is a GRAMMY®-winning choir and nonprofit performing arts and music education organization that believes in the power of music to change lives, inspire peace, and foster belonging.',
+      linkUrl: 'https://conspirare.org/'
+    };
+
+    // Standard Section Content States
+
+    let atxMusiciansData = {
+      title: 'AUSTIN TEXAS MUSICIANS',
+      imgUrl: 'https://prosperxo.com/assets/newsletter-preview/July+ATXM+Event+Cover.jpg',
+      date: 'July 7, 2026',
+      subtitle: 'ATXM Night Shift Music Industry Mixer + Open Mic (Free)',
+      text: "As Austin's longest-running music industry mixer, Night Shift continues to connect musicians, venues, industry professionals, nonprofit partners, and music supporters in a relaxed environment that fosters meaningful connections and career opportunities.",
+      linkUrl: 'https://www.eventbrite.com/e/july-atxm-night-shift-music-industry-mixer-open-mic-free-tickets-1991317157222?keep_tld=true'
+    };
+
+    let talaData = {
+      title: 'TALA',
+      subtitle: 'Texas Accountants and Lawyers for the Arts',
+      imgUrl: 'https://prosperxo.com/assets/newsletter-preview/tala_profile.jpg',
+      text: 'Matching Texas artists and arts nonprofits with pro bono professional assistance since 1979.<br><br>Texas Accountants and Lawyers for the Arts believes that all creatives — regardless of income or background — deserve access to the business knowledge and advice necessary to grow a career in the arts. Our programs are designed to help participants apply sound business practices to protect intellectual property, advance careers, and develop income.',
+      youtubeUrl: 'https://www.youtube.com/@talaoffice',
+      aboutText: 'TALA offers free legal and accounting services to artists, craftspeople, and arts-centered nonprofit organizations from all creative disciplines, including visual arts, music, film and television, new media, writing and journalism, fashion design, theater, dance, and performing arts.'
+    };
+
+    let simsData = {
+      title: 'SIMS Foundation',
+      imgUrl: 'https://prosperxo.com/assets/newsletter-preview/SIMS-30.jpg',
+      text: 'The SIMS Foundation provides mental health and substance use recovery services and supports for musicians, music industry professionals, and their dependent family members. Through education, community partnerships, and accessible managed care, SIMS seeks to destigmatize and reduce mental health and substance use issues, while supporting and enhancing the wellbeing of the music community at large.',
+      instagramUrl: 'https://www.instagram.com/simsfoundation/',
+      facebookUrl: 'https://www.facebook.com/simsfoundation'
+    };
+
+    let haamData = {
+      title: 'Help HAAM Spread The Word About HAAM Membership',
+      imgUrl: 'https://prosperxo.com/assets/newsletter-preview/prosperxo-newsletter-resource-haam.jpg',
+      text: 'We want to make sure all local musicians, DJs, and music teachers know about HAAM! You can help by sharing the link below with your musician friends so they can request a HAAM application today!',
+      joinUrl: 'https://myhaam.org/join-haam',
+      instagramUrl: 'https://www.instagram.com/myhaam',
+      facebookUrl: 'https://www.facebook.com/myhaam'
+    };
+
+    let artistVoicesWall = {
+      bgColor: '#010101',
+      textColor: '#ffffff',
+      imgUrl: 'https://prosperxo.com/assets/artist-voices/ProsperXO-Social-ArtistVoices-2_1.jpg'
+    };
+
+    let fuelForJourney = {
+      textLines: [],
+      quote: '“We should consider every day lost on which we have not danced at least once.”',
+      quoteAuthor: 'Friedrich Wilhelm Nietzsche'
+    };
+
+    let customSectionsData = {};
+
+    window.onload = function() {
+      buildControlsForm();
+      updatePreview();
+    };
+
+    function buildControlsForm() {
+      const formContainer = document.getElementById('form-controls');
+      formContainer.innerHTML = '';
+
+      const topAddBtn = document.createElement('button');
+      topAddBtn.className = 'btn btn-add-section';
+      topAddBtn.innerHTML = '➕ Add New Section';
+      topAddBtn.onclick = () => addNewCustomSection();
+      formContainer.appendChild(topAddBtn);
+
+      let customCounter = 1;
+
+      activeSections.forEach((sec, idx) => {
+        const card = document.createElement('div');
+        card.className = 'section-card';
+        card.setAttribute('draggable', 'true');
+
+        card.addEventListener('dragstart', (e) => {
+          if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(e.target.tagName)) {
+            e.preventDefault();
+            return;
+          }
+          draggedIndex = idx;
+          card.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', idx);
+        });
+
+        card.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          card.classList.add('drag-over');
+        });
+
+        card.addEventListener('dragleave', () => {
+          card.classList.remove('drag-over');
+        });
+
+        card.addEventListener('drop', (e) => {
+          e.preventDefault();
+          card.classList.remove('drag-over');
+          const targetIndex = idx;
+          if (draggedIndex !== null && draggedIndex !== targetIndex) {
+            const [movedItem] = activeSections.splice(draggedIndex, 1);
+            activeSections.splice(targetIndex, 0, movedItem);
+            buildControlsForm();
+            updatePreview();
+          }
+        });
+
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+          document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        });
+
+        let displayTitle = sec.title;
+        if (sec.type === 'custom') {
+          displayTitle = `Custom Section #${customCounter++}`;
+        }
+
+        const headerBar = document.createElement('div');
+        headerBar.className = 'section-header-bar';
+
+        const headerLeft = document.createElement('div');
+        headerLeft.className = 'section-header-left';
+        headerLeft.innerHTML = `<span class="drag-handle" title="Drag to reorder">⋮⋮</span> <span>${escapeHtml(displayTitle)}</span>`;
+
+        const headerActions = document.createElement('div');
+        headerActions.className = 'section-header-actions';
+
+        const upBtn = document.createElement('button');
+        upBtn.className = 'btn-icon';
+        upBtn.title = 'Move Section Up';
+        upBtn.innerText = '▲';
+        upBtn.onclick = (e) => {
+          e.stopPropagation();
+          moveSection(idx, -1);
+        };
+        headerActions.appendChild(upBtn);
+
+        const downBtn = document.createElement('button');
+        downBtn.className = 'btn-icon';
+        downBtn.title = 'Move Section Down';
+        downBtn.innerText = '▼';
+        downBtn.onclick = (e) => {
+          e.stopPropagation();
+          moveSection(idx, 1);
+        };
+        headerActions.appendChild(downBtn);
+
+        if (sec.type === 'custom' || sec.type === 'sims' || sec.type === 'haam') {
+          const removeBtn = document.createElement('button');
+          removeBtn.className = 'btn-icon';
+          removeBtn.title = 'Remove Section';
+          removeBtn.style.color = '#ef4444';
+          removeBtn.innerText = '✕';
+          removeBtn.onclick = (e) => {
+            e.stopPropagation();
+            removeSection(idx);
+          };
+          headerActions.appendChild(removeBtn);
+        }
+
+        const isCollapsed = !!collapsedMap[sec.id];
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'btn-icon';
+        toggleBtn.title = isCollapsed ? 'Expand' : 'Collapse';
+        toggleBtn.innerText = isCollapsed ? '▸' : '▾';
+        toggleBtn.onclick = (e) => {
+          e.stopPropagation();
+          collapsedMap[sec.id] = !collapsedMap[sec.id];
+          buildControlsForm();
+        };
+        headerActions.appendChild(toggleBtn);
+
+        headerBar.appendChild(headerLeft);
+        headerBar.appendChild(headerActions);
+        card.appendChild(headerBar);
+
+        const body = document.createElement('div');
+        body.className = `section-body ${isCollapsed ? 'collapsed' : ''}`;
+        renderSectionInputs(body, sec, displayTitle);
+        card.appendChild(body);
+
+        formContainer.appendChild(card);
+      });
+
+      const bottomAddBtn = document.createElement('button');
+      bottomAddBtn.className = 'btn btn-add-section';
+      bottomAddBtn.innerHTML = '➕ Add New Section';
+      bottomAddBtn.onclick = () => addNewCustomSection();
+      formContainer.appendChild(bottomAddBtn);
+
+      const hasSIMS = activeSections.some(s => s.type === 'sims');
+      const hasHAAM = activeSections.some(s => s.type === 'haam');
+
+      if (!hasSIMS || !hasHAAM) {
+        const restoreBox = document.createElement('div');
+        restoreBox.className = 'form-group';
+        restoreBox.style.marginTop = '10px';
+
+        const label = document.createElement('label');
+        label.innerText = 'Restore Removed Standard Sections';
+        restoreBox.appendChild(label);
+
+        if (!hasSIMS) {
+          const addSimsBtn = document.createElement('button');
+          addSimsBtn.className = 'btn btn-secondary';
+          addSimsBtn.style.marginBottom = '6px';
+          addSimsBtn.innerText = '➕ Add SIMS Foundation Section';
+          addSimsBtn.onclick = () => {
+            activeSections.push({ id: 'sims', type: 'sims', title: 'SIMS Foundation' });
+            buildControlsForm();
+            updatePreview();
+          };
+          restoreBox.appendChild(addSimsBtn);
+        }
+
+        if (!hasHAAM) {
+          const addHaamBtn = document.createElement('button');
+          addHaamBtn.className = 'btn btn-secondary';
+          addHaamBtn.innerText = '➕ Add HAAM Section';
+          addHaamBtn.onclick = () => {
+            activeSections.push({ id: 'haam', type: 'haam', title: 'HAAM' });
+            buildControlsForm();
+            updatePreview();
+          };
+          restoreBox.appendChild(addHaamBtn);
+        }
+
+        formContainer.appendChild(restoreBox);
+      }
+    }
+
+    function moveSection(index, direction) {
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= activeSections.length) return;
+      const [moved] = activeSections.splice(index, 1);
+      activeSections.splice(newIndex, 0, moved);
+      buildControlsForm();
+      updatePreview();
+    }
+
+    function removeSection(index) {
+      const sec = activeSections[index];
+      if (sec.type === 'custom') {
+        delete customSectionsData[sec.id];
+      }
+      activeSections.splice(index, 1);
+      buildControlsForm();
+      updatePreview();
+    }
+
+    function addNewCustomSection() {
+      const newId = 'custom_' + Date.now();
+      customSectionsData[newId] = {
+        title: 'New Section',
+        bgColor: '#1d00c2',
+        textColor: '#ffffff',
+        img: '',
+        text: 'Enter description text here.',
+        links: []
+      };
+      activeSections.push({ id: newId, type: 'custom', title: 'Custom Section' });
+      buildControlsForm();
+      updatePreview();
+    }
+
+    function renderSectionInputs(container, sec, displayTitle) {
+      if (sec.type === 'townhall') {
+        createTextInputGroup(container, 'th-img', 'Town Hall Image Link', townHallData.image, (val) => {
+          townHallData.image = val;
+          updatePreview();
+        });
+
+        createTextInputGroup(container, 'th-luma', 'Luma Link', townHallData.lumaLink, (val) => {
+          townHallData.lumaLink = val;
+          updatePreview();
+        });
+
+        createDatePickerGroup(container, 'th-date', 'Town Hall Date', townHallData.date, (formattedDate) => {
+          townHallData.date = formattedDate;
+          updatePreview();
+        });
+
+        createTextInputGroup(container, 'th-location', 'Location', townHallData.location, (val) => {
+          townHallData.location = val;
+          updatePreview();
+        });
+
+        const sentenceBox = document.createElement('div');
+        sentenceBox.className = 'form-group';
+        sentenceBox.innerHTML = '<label>Town Hall Description Sentences</label>';
+
+        townHallData.sentences.forEach((sentence, sIdx) => {
+          const row = document.createElement('div');
+          row.style.display = 'flex';
+          row.style.flexDirection = 'column';
+          row.style.gap = '4px';
+          row.style.marginBottom = '6px';
+
+          const rowHeader = document.createElement('div');
+          rowHeader.style.display = 'flex';
+          rowHeader.style.justifyContent = 'space-between';
+          rowHeader.style.alignItems = 'center';
+
+          const subLabel = document.createElement('span');
+          subLabel.innerText = `Sentence #${sIdx + 1}`;
+          subLabel.style.fontSize = '0.75rem';
+          subLabel.style.color = '#94a3b8';
+
+          const delBtn = document.createElement('button');
+          delBtn.className = 'btn btn-danger';
+          delBtn.innerText = '✕ Delete';
+          delBtn.onclick = () => {
+            townHallData.sentences.splice(sIdx, 1);
+            buildControlsForm();
+            updatePreview();
+          };
+
+          rowHeader.appendChild(subLabel);
+          rowHeader.appendChild(delBtn);
+          row.appendChild(rowHeader);
+
+          const textarea = document.createElement('textarea');
+          textarea.value = sentence;
+          textarea.addEventListener('input', (e) => {
+            townHallData.sentences[sIdx] = e.target.value;
+            updatePreview();
+          });
+          row.appendChild(textarea);
+          sentenceBox.appendChild(row);
+        });
+
+        const addSentenceBtn = document.createElement('button');
+        addSentenceBtn.className = 'btn btn-secondary';
+        addSentenceBtn.style.width = '100%';
+        addSentenceBtn.innerText = '➕ Additional Sentence';
+        addSentenceBtn.onclick = () => {
+          townHallData.sentences.push('');
+          buildControlsForm();
+          updatePreview();
+        };
+        sentenceBox.appendChild(addSentenceBtn);
+        container.appendChild(sentenceBox);
+
+        const spkGroup = document.createElement('div');
+        spkGroup.className = 'form-group';
+
+        const spkLabel = document.createElement('label');
+        spkLabel.innerText = 'How many speakers?';
+        spkGroup.appendChild(spkLabel);
+
+        const select = document.createElement('select');
+        for (let i = 0; i <= 8; i++) {
+          const opt = document.createElement('option');
+          opt.value = i;
+          opt.innerText = i === 0 ? '0 (No Speakers)' : `${i} Speaker${i > 1 ? 's' : ''}`;
+          if (i === townHallData.speakers.length) opt.selected = true;
+          select.appendChild(opt);
+        }
+
+        select.addEventListener('change', (e) => {
+          const count = parseInt(e.target.value, 10);
+          while (townHallData.speakers.length < count) {
+            townHallData.speakers.push({
+              name: `Speaker ${townHallData.speakers.length + 1}`,
+              title: 'Title / Role',
+              img: '',
+              description: ''
+            });
+          }
+          if (townHallData.speakers.length > count) {
+            townHallData.speakers = townHallData.speakers.slice(0, count);
+          }
+          buildControlsForm();
+          updatePreview();
+        });
+        spkGroup.appendChild(select);
+        container.appendChild(spkGroup);
+
+        townHallData.speakers.forEach((spk, sIdx) => {
+          const card = document.createElement('div');
+          card.className = 'speaker-card';
+          card.innerHTML = `<h5>Speaker #${sIdx + 1}</h5>`;
+
+          createTextInputGroup(card, `spk-name-${sIdx}`, 'Name', spk.name, (val) => {
+            spk.name = val;
+            updatePreview();
+          });
+          createTextInputGroup(card, `spk-title-${sIdx}`, 'Title', spk.title, (val) => {
+            spk.title = val;
+            updatePreview();
+          });
+          createTextInputGroup(card, `spk-img-${sIdx}`, 'Image Link', spk.img, (val) => {
+            spk.img = val;
+            updatePreview();
+          });
+          createTextInputGroup(card, `spk-desc-${sIdx}`, 'Description', spk.description, (val) => {
+            spk.description = val;
+            updatePreview();
+          });
+
+          container.appendChild(card);
+        });
+
+        createTextInputGroup(container, 'th-rsvp', 'RSVP Button Luma Link', townHallData.rsvpLink, (val) => {
+          townHallData.rsvpLink = val;
+          updatePreview();
+        });
+
+      } else if (sec.type === 'resource_month') {
+        createTextInputGroup(container, 'res-org', 'Name of the Org', resourceOfMonth.orgName, (val) => {
+          resourceOfMonth.orgName = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'res-img', 'Image File URL', resourceOfMonth.imgUrl, (val) => {
+          resourceOfMonth.imgUrl = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'res-desc', 'Description', resourceOfMonth.description, (val) => {
+          resourceOfMonth.description = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'res-link', 'Learn More URL (Button & Image)', resourceOfMonth.linkUrl, (val) => {
+          resourceOfMonth.linkUrl = val;
+          updatePreview();
+        });
+
+
+      } else if (sec.type === 'atx_musicians') {
+        createTextInputGroup(container, 'atx-title', 'Title', atxMusiciansData.title, (val) => {
+          atxMusiciansData.title = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'atx-img', 'Image URL', atxMusiciansData.imgUrl, (val) => {
+          atxMusiciansData.imgUrl = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'atx-date', 'Date & Info', atxMusiciansData.date, (val) => {
+          atxMusiciansData.date = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'atx-text', 'Description', atxMusiciansData.text, (val) => {
+          atxMusiciansData.text = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'atx-link', 'RSVP Link', atxMusiciansData.linkUrl, (val) => {
+          atxMusiciansData.linkUrl = val;
+          updatePreview();
+        });
+
+      } else if (sec.type === 'tala') {
+        createTextInputGroup(container, 'tala-title', 'Title', talaData.title, (val) => {
+          talaData.title = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'tala-img', 'Image URL', talaData.imgUrl, (val) => {
+          talaData.imgUrl = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'tala-text', 'Description', talaData.text, (val) => {
+          talaData.text = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'tala-yt', 'YouTube Link', talaData.youtubeUrl, (val) => {
+          talaData.youtubeUrl = val;
+          updatePreview();
+        });
+
+      } else if (sec.type === 'sims') {
+        createTextInputGroup(container, 'sims-img', 'Image URL', simsData.imgUrl, (val) => {
+          simsData.imgUrl = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'sims-text', 'Description', simsData.text, (val) => {
+          simsData.text = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'sims-ig', 'Instagram Link', simsData.instagramUrl, (val) => {
+          simsData.instagramUrl = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'sims-fb', 'Facebook Link', simsData.facebookUrl, (val) => {
+          simsData.facebookUrl = val;
+          updatePreview();
+        });
+
+      } else if (sec.type === 'haam') {
+        createTextInputGroup(container, 'haam-img', 'Image URL', haamData.imgUrl, (val) => {
+          haamData.imgUrl = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'haam-text', 'Description', haamData.text, (val) => {
+          haamData.text = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'haam-join', 'Join HAAM URL', haamData.joinUrl, (val) => {
+          haamData.joinUrl = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'haam-ig', 'Instagram Link', haamData.instagramUrl, (val) => {
+          haamData.instagramUrl = val;
+          updatePreview();
+        });
+        createTextInputGroup(container, 'haam-fb', 'Facebook Link', haamData.facebookUrl, (val) => {
+          haamData.facebookUrl = val;
+          updatePreview();
+        });
+
+      } else if (sec.type === 'artist_voices') {
+        const colorRow = document.createElement('div');
+        colorRow.className = 'color-picker-row';
+        createColorPickerGroup(colorRow, 'avw-bg', 'Background Color', artistVoicesWall.bgColor, (val) => {
+          artistVoicesWall.bgColor = val;
+          updatePreview();
+        });
+        createColorPickerGroup(colorRow, 'avw-text', 'Font Color', artistVoicesWall.textColor, (val) => {
+          artistVoicesWall.textColor = val;
+          updatePreview();
+        });
+        container.appendChild(colorRow);
+
+        createTextInputGroup(container, 'avw-img', 'Image Link', artistVoicesWall.imgUrl, (val) => {
+          artistVoicesWall.imgUrl = val;
+          updatePreview();
+        });
+
+      } else if (sec.type === 'fuel_journey') {
+        const linesBox = document.createElement('div');
+        linesBox.style.display = 'flex';
+        linesBox.style.flexDirection = 'column';
+        linesBox.style.gap = '8px';
+
+        fuelForJourney.textLines.forEach((line, lIdx) => {
+          const row = document.createElement('div');
+          row.style.display = 'flex';
+          row.style.flexDirection = 'column';
+          row.style.gap = '4px';
+
+          const rHead = document.createElement('div');
+          rHead.style.display = 'flex';
+          rHead.style.justifyContent = 'space-between';
+          rHead.style.alignItems = 'center';
+
+          const sub = document.createElement('span');
+          sub.innerText = `Additional Text Line #${lIdx + 1}`;
+          sub.style.fontSize = '0.75rem';
+          sub.style.color = '#94a3b8';
+
+          const del = document.createElement('button');
+          del.className = 'btn btn-danger';
+          del.innerText = '✕ Delete';
+          del.onclick = () => {
+            fuelForJourney.textLines.splice(lIdx, 1);
+            buildControlsForm();
+            updatePreview();
+          };
+
+          rHead.appendChild(sub);
+          rHead.appendChild(del);
+          row.appendChild(rHead);
+
+          const ta = document.createElement('textarea');
+          ta.value = line;
+          ta.addEventListener('input', (e) => {
+            fuelForJourney.textLines[lIdx] = e.target.value;
+            updatePreview();
+          });
+          row.appendChild(ta);
+          linesBox.appendChild(row);
+        });
+
+        container.appendChild(linesBox);
+
+        const addTextBtn = document.createElement('button');
+        addTextBtn.className = 'btn btn-secondary';
+        addTextBtn.style.width = '100%';
+        addTextBtn.innerText = '➕ add text';
+        addTextBtn.onclick = () => {
+          fuelForJourney.textLines.push('');
+          buildControlsForm();
+          updatePreview();
+        };
+        container.appendChild(addTextBtn);
+
+        createTextInputGroup(container, 'fuel-quote', 'Quote Text', fuelForJourney.quote, (val) => {
+          fuelForJourney.quote = val;
+          updatePreview();
+        });
+
+        createTextInputGroup(container, 'fuel-author', 'Quote Author', fuelForJourney.quoteAuthor, (val) => {
+          fuelForJourney.quoteAuthor = val;
+          updatePreview();
+        });
+
+      } else if (sec.type === 'custom') {
+        const cData = customSectionsData[sec.id] || {
+          title: 'New Section',
+          bgColor: '#1d00c2',
+          textColor: '#ffffff',
+          img: '',
+          text: '',
+          links: []
+        };
+
+        const colorRow = document.createElement('div');
+        colorRow.className = 'color-picker-row';
+
+        createColorPickerGroup(colorRow, `c-bg-${sec.id}`, 'Background Color', cData.bgColor, (val) => {
+          cData.bgColor = val;
+          updatePreview();
+        });
+        createColorPickerGroup(colorRow, `c-text-${sec.id}`, 'Font Color', cData.textColor, (val) => {
+          cData.textColor = val;
+          updatePreview();
+        });
+        container.appendChild(colorRow);
+
+        createTextInputGroup(container, `c-title-${sec.id}`, 'Section Name', cData.title, (val) => {
+          cData.title = val;
+          updatePreview();
+        });
+
+        createTextInputGroup(container, `c-img-${sec.id}`, 'Image Link', cData.img, (val) => {
+          cData.img = val;
+          updatePreview();
+        });
+
+        createTextInputGroup(container, `c-desc-${sec.id}`, 'Description', cData.text, (val) => {
+          cData.text = val;
+          updatePreview();
+        });
+
+        if (!cData.links) cData.links = [];
+        cData.links.forEach((link, linkIdx) => {
+          const lRow = document.createElement('div');
+          lRow.className = 'link-item-row';
+
+          const lHeader = document.createElement('div');
+          lHeader.className = 'link-item-header';
+          lHeader.innerHTML = `<span>Link #${linkIdx + 1}</span>`;
+
+          const delLinkBtn = document.createElement('button');
+          delLinkBtn.className = 'btn btn-danger';
+          delLinkBtn.innerText = '✕ Delete';
+          delLinkBtn.onclick = () => {
+            cData.links.splice(linkIdx, 1);
+            buildControlsForm();
+            updatePreview();
+          };
+          lHeader.appendChild(delLinkBtn);
+          lRow.appendChild(lHeader);
+
+          createTextInputGroup(lRow, `btn-lbl-${sec.id}-${linkIdx}`, 'Button Text', link.label || 'Learn More', (val) => {
+            link.label = val;
+            updatePreview();
+          });
+
+          createTextInputGroup(lRow, `btn-url-${sec.id}-${linkIdx}`, 'Destination Link', link.url || '', (val) => {
+            link.url = val;
+            updatePreview();
+          });
+
+          container.appendChild(lRow);
+        });
+
+        const addLinkBtn = document.createElement('button');
+        addLinkBtn.className = 'btn btn-secondary';
+        addLinkBtn.style.width = '100%';
+        addLinkBtn.innerText = '🔗 + Optional Link?';
+        addLinkBtn.onclick = () => {
+          cData.links.push({ label: 'Learn More', url: '' });
+          buildControlsForm();
+          updatePreview();
+        };
+        container.appendChild(addLinkBtn);
+      }
+    }
+
+    function createTextInputGroup(container, id, labelText, initialVal, onChange) {
+      const group = document.createElement('div');
+      group.className = 'form-group';
+
+      const label = document.createElement('label');
+      label.innerText = labelText;
+      label.htmlFor = id;
+
+      const isLong = (initialVal || '').length > 65 || labelText.toLowerCase().includes('description') || labelText.toLowerCase().includes('text');
+      const input = isLong ? document.createElement('textarea') : document.createElement('input');
+
+      if (!isLong) input.type = 'text';
+      input.id = id;
+      input.value = initialVal || '';
+      input.addEventListener('input', (e) => onChange(e.target.value));
+
+      group.appendChild(label);
+      group.appendChild(input);
+      container.appendChild(group);
+    }
+
+    function createDatePickerGroup(container, id, labelText, initialVal, onChange) {
+      const group = document.createElement('div');
+      group.className = 'form-group';
+
+      const label = document.createElement('label');
+      label.innerText = labelText;
+      label.htmlFor = id;
+
+      const input = document.createElement('input');
+      input.type = 'date';
+      input.id = id;
+      input.value = parseToDateInput(initialVal);
+
+      input.addEventListener('change', (e) => {
+        const formatted = formatDateString(e.target.value);
+        onChange(formatted);
+      });
+
+      group.appendChild(label);
+      group.appendChild(input);
+      container.appendChild(group);
+    }
+
+    function createColorPickerGroup(container, id, labelText, initialColor, onChange) {
+      const group = document.createElement('div');
+      group.className = 'form-group';
+
+      const label = document.createElement('label');
+      label.innerText = labelText;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'color-picker-wrapper';
+
+      const colorInput = document.createElement('input');
+      colorInput.type = 'color';
+      colorInput.id = id;
+      colorInput.value = rgbToHex(initialColor);
+
+      const hexSpan = document.createElement('span');
+      hexSpan.style.fontSize = '0.75rem';
+      hexSpan.style.color = '#94a3b8';
+      hexSpan.innerText = colorInput.value;
+
+      colorInput.addEventListener('input', (e) => {
+        hexSpan.innerText = e.target.value;
+        onChange(e.target.value);
+      });
+
+      wrapper.appendChild(colorInput);
+      wrapper.appendChild(hexSpan);
+      group.appendChild(label);
+      group.appendChild(wrapper);
+      container.appendChild(group);
+    }
+
+    function parseToDateInput(textStr) {
+      if (!textStr) return '2026-07-08';
+      const d = new Date(textStr);
+      if (isNaN(d.getTime())) return '2026-07-08';
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function formatDateString(dateStr) {
+      if (!dateStr) return '';
+      const [year, month, day] = dateStr.split('-');
+      const date = new Date(Date.UTC(year, month - 1, day));
+      return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+    }
+
+    function rgbToHex(rgbStr) {
+      if (!rgbStr || rgbStr.startsWith('#')) return rgbStr || '#6b00c2';
+      const rgb = rgbStr.match(/\d+/g);
+      if (!rgb || rgb.length < 3) return '#6b00c2';
+      return '#' + ((1 << 24) + (parseInt(rgb[0]) << 16) + (parseInt(rgb[1]) << 8) + parseInt(rgb[2])).toString(16).slice(1);
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    // HTML Output Builder
+    function renderSectionHTML(sec) {
+      if (sec.type === 'townhall') {
+        const sentencesHtml = townHallData.sentences
+          .filter(s => s.trim() !== '')
+          .map(s => escapeHtml(s))
+          .join('<br><br>');
+
+        const speakersHtml = townHallData.speakers.map(spk => `
+          <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 18px; font-weight: 700; margin: 0 0 25px 0; text-align: center;">
+            ${escapeHtml(spk.name)}<br>
+            <span style="font-size: 15px; font-weight: 400; color: #dddddd;">${escapeHtml(spk.title)}</span><br><br>
+            ${spk.img ? `<img src="${escapeHtml(spk.img)}" style="width: 100%; max-width: 510px; height: auto; border-radius: 5px;" alt="${escapeHtml(spk.name)}">` : ''}
+            ${spk.description ? `<br><span style="font-size: 15px; font-weight: 300; line-height: 1.5; color: #ffffff; display: block; max-width: 480px; margin: 10px auto 0 auto; text-align: center;">${escapeHtml(spk.description)}</span>` : ''}
+          </p>
+        `).join('');
+
+        return `
+          <tr>
+            <td style="padding: 0 0 20px 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #000000; border-radius: 15px;">
+                <tr>
+                  <td style="padding: 40px 30px; text-align: center;">
+                    <img src="https://243102463.fs1.hubspotusercontent-na2.net/hubfs/243102463/logo.png" style="width:20%; border-radius:10px;" alt="Prosper XO"><br>
+                    <img src="https://243102463.fs1.hubspotusercontent-na2.net/hubfs/243102463/tagline.png" style="width:80%;"><br><br>
+                    <h2 style="color:#ffe94f;font-family:'Poppins',Arial,sans-serif;font-size:26px;font-weight:700;margin:0 0 8px 0;text-align:center;">XO Insider</h2>
+                    <p style="color:#ffffff;font-family:'Poppins',Arial,sans-serif;font-size:18px;line-height:1.4;margin:0;text-align:center;">
+                      Powered by Prosper XO: A platform and movement<br>for artist equity, transparency, and ownership.
+                    </p>
+                    <h2 style="color:#ffe94f;font-family:'Poppins',Arial,sans-serif;font-size:22px;font-weight:700;margin:20px 0 15px 0;text-align:center;">Next Town Hall</h2>
+                    ${townHallData.image ? `<div style="border-radius: 15px;margin: 0 auto; width:100%;"><a href="${escapeHtml(townHallData.lumaLink)}" target="_blank"><img src="${escapeHtml(townHallData.image)}" style="width:100%;margin-top:10px; margin-bottom:25px; border-radius:10px;"></a></div>` : ''}
+                    <div style="text-align: left; max-width: 500px; margin: 0 auto 25px auto;">
+                      <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 18px; font-weight: 700; margin: 0 0 10px 0; text-align: center;">${escapeHtml(townHallData.date)}</p>
+                      <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 600; margin: 0 0 15px 0; text-align: center;">${escapeHtml(townHallData.location)}</p>
+                      ${sentencesHtml ? `<p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; text-align: left;">${sentencesHtml}</p>` : ''}
+                      ${townHallData.speakers.length > 0 ? `
+                        <div style="text-align: center;">
+                          <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 18px; font-weight: 700; margin: 0 0 10px 0; text-align: center;"><strong>Featuring:</strong></p>
+                          ${speakersHtml}
+                        </div>
+                      ` : ''}
+                      <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 18px; font-weight: 700; margin: 20px 0 10px 0; text-align: center;">Hosted by: Lauren Bruno &amp; Prosper XO<br><br></p>
+                      <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 18px; font-weight: 700; margin: 0 0 10px 0; text-align: center;">This event is free and open to the public. Because when artists prosper, culture thrives.</p>
+                    </div>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 30px auto 10px auto;">
+                      <tr>
+                        <td style="text-align: center;">
+                          <a href="${escapeHtml(townHallData.rsvpLink)}" target="_blank" style="display: inline-block; background-color: #ffe94f; color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 700; text-decoration: none; text-transform: uppercase; padding: 15px 40px; border-radius: 25px;">RSVP to Town Hall</a>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 300; margin: 25px 0 15px 0; text-align: center;">At Prosper XO, we host monthly Town Halls on the second Wednesday of every month in Austin Texas, a space for artists, fans, brands, and community leaders to come together.</p>
+                    <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 300; margin: 0 0 15px 0; text-align: center;">Education, listening, resource-sharing, and in-person connection are at the heart of what we do. These gatherings are about more than conversation; they’re about building a future where artists prosper and culture thrives.</p>
+                    <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 300; margin: 0 0 15px 0; text-align: center;">Thank you to Station Austin for sponsoring Prosper XO. Station Austin is the center of gravity for entrepreneurs in Texas. They bring together the best entrepreneurs in the state and connect them with their first investors, employees, mentors, and customers. To sign up for a Station Austin membership, <a href="https://capital-factory.officernd.com/signup?office=5d1bcda0dbd6e40010479eec" target="_blank" style="color: #ffe94f; text-decoration: none;">click here</a>.</p>
+                    <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 300; margin: 0; text-align: center;">🌈 Can't make it in person? No worries we live stream every Town Hall so you can still join the movement, wherever you are. And check out our <a href="https://www.youtube.com/@prosperxo" target="_blank" style="color: #ffe94f; text-decoration: none;">YouTube channel</a> for previous Town Hall interviews.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        `;
+      }
+
+      if (sec.type === 'resource_month') {
+        return `
+          <tr>
+            <td style="padding: 0 0 20px 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #6d37ea 0%, #4169e1 100%); border-radius: 15px;">
+                <tr>
+                  <td style="padding: 30px; text-align: center;">
+                    <h2 style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 22px; font-weight: 900; line-height: 1.3; margin: 0 0 20px 0; text-align: center; text-transform: uppercase;">
+                      Resource of the Month:<br>${escapeHtml(resourceOfMonth.orgName)}
+                    </h2>
+                    ${resourceOfMonth.imgUrl ? `<div style="border-radius: 15px; margin: 0 auto; width: 100%;"><a href="${escapeHtml(resourceOfMonth.linkUrl)}" target="_blank"><img src="${escapeHtml(resourceOfMonth.imgUrl)}" alt="${escapeHtml(resourceOfMonth.orgName)}" style="width: 100%; border-radius: 10px;"></a></div><br><br>` : ''}
+                    <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; line-height: 1.5; margin: 0 0 20px 0; text-align: center;">${escapeHtml(resourceOfMonth.description)}<br><br></p>
+                    <a href="${escapeHtml(resourceOfMonth.linkUrl)}" target="_blank" style="display: inline-block; background-color: #ffe94f; color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 700; text-decoration: none; text-transform: uppercase; padding: 15px 40px; border-radius: 25px; margin-bottom: 10px;">Learn More</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        `;
+      }
+
+
+
+      if (sec.type === 'atx_musicians') {
+        return `
+          <tr>
+            <td style="padding: 0 0 20px 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #3f3f3f; border-radius: 15px;">
+                <tr>
+                  <td style="padding: 30px; text-align: center;">
+                    <h2 style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 24px; font-weight: 900; line-height: 1.2; margin: 0 0 20px 0; text-align: center; text-transform: uppercase;">${escapeHtml(atxMusiciansData.title)}</h2>
+                    ${atxMusiciansData.imgUrl ? `<div style="border-radius: 15px; margin: 0 auto; width: 100%;"><a href="${escapeHtml(atxMusiciansData.linkUrl)}" target="_blank"><img src="${escapeHtml(atxMusiciansData.imgUrl)}" alt="ATXM Mixer" style="width: 100%; border-radius: 10px;"></a></div><br><br>` : ''}
+                    <h2 style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 24px; font-weight: 700; line-height: 1.2; margin: 0 0 25px 0; text-align: center; letter-spacing: 2px;">${escapeHtml(atxMusiciansData.date)}<br>${escapeHtml(atxMusiciansData.subtitle)}</h2>
+                    <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; line-height: 1.6; margin: 25px 0 0 0; text-align: center;">${atxMusiciansData.text}<br><br></p>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 20px auto;">
+                      <tr>
+                        <td style="text-align: center;">
+                          <a href="${escapeHtml(atxMusiciansData.linkUrl)}" target="_blank" style="display: inline-block; background-color: #ffe94f; color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 700; text-decoration: none; text-transform: uppercase; padding: 15px 40px; border-radius: 25px;">RSVP Required</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        `;
+      }
+
+      if (sec.type === 'tala') {
+        return `
+          <tr>
+            <td style="padding: 0 0 20px 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #93C840; border-radius: 15px;">
+                <tr>
+                  <td style="padding: 30px; text-align: center;">
+                    <h2 style="color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 24px; font-weight: 900; line-height: 1.2; margin: 0 0 20px 0; text-align: center; text-transform: uppercase;">${escapeHtml(talaData.title)}<br></h2>
+                    <p style="color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 20px; font-weight: 700; line-height: 1.6; margin: 0 0 20px 0; text-align: center;">${escapeHtml(talaData.subtitle)}</p>
+                    ${talaData.imgUrl ? `<div style="border-radius: 15px; margin: 0 auto; width: 100%;"><a href="https://talarts.org/" target="_blank"><img src="${escapeHtml(talaData.imgUrl)}" alt="TALA" style="width: 50%; border-radius: 10px;"></a></div><br><br>` : ''}
+                    <p style="color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; text-align: center;">${talaData.text}</p>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 20px auto;">
+                      <tr>
+                        <td style="text-align: center;">
+                          <a href="${escapeHtml(talaData.youtubeUrl)}" target="_blank" style="display: inline-block; background-color: #ffe94f; color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 700; text-decoration: none; text-transform: uppercase; padding: 15px 40px; border-radius: 25px;">YouTube</a>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 20px; font-weight: 700; line-height: 1.6; margin: 0 0 20px 0; text-align: center;">About TALA</p>
+                    <p style="color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; text-align: center;">${escapeHtml(talaData.aboutText)}<br></p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        `;
+      }
+
+      if (sec.type === 'sims') {
+        return `
+          <tr>
+            <td style="padding: 0 0 20px 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #ff4500; border-radius: 15px;">
+                <tr>
+                  <td style="padding: 30px; text-align: center;">
+                    ${simsData.imgUrl ? `<div style="border-radius: 15px;margin: 0 auto; width:100%;"><a href="https://simsfoundation.org/" target="_blank"><img src="${escapeHtml(simsData.imgUrl)}" alt="SIMS Foundation" style="width: 100%; border-radius: 10px;"></a></div><br><br>` : ''}
+                    <h2 style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 24px; font-weight: 900; line-height: 1.2; margin: 0 0 15px 0; text-align: center; text-transform: uppercase;">${escapeHtml(simsData.title)}</h2>
+                    <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; line-height: 1.5; margin: 0 0 20px 0; text-align: center;">${escapeHtml(simsData.text)}</p>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 20px auto 10px auto;">
+                      <tr>
+                        <td style="text-align: center;">
+                          <a href="${escapeHtml(simsData.instagramUrl)}" target="_blank" style="display: inline-block; background-color: #ffe94f; color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 700; text-decoration: none; text-transform: uppercase; padding: 15px 40px; border-radius: 25px;">Instagram</a>
+                        </td>
+                      </tr>
+                    </table>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto 10px auto;">
+                      <tr>
+                        <td style="text-align: center;">
+                          <a href="${escapeHtml(simsData.facebookUrl)}" target="_blank" style="display: inline-block; background-color: #ffe94f; color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 700; text-decoration: none; text-transform: uppercase; padding: 15px 40px; border-radius: 25px;">Facebook</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        `;
+      }
+
+      if (sec.type === 'haam') {
+        return `
+          <tr>
+            <td style="padding: 0 0 20px 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #8001fe; border-radius: 15px;">
+                <tr>
+                  <td style="padding: 30px; text-align: center;">
+                    <h2 style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 24px; font-weight: 900; line-height: 1.2; margin: 0 0 20px 0; text-align: center; text-transform: uppercase;">${escapeHtml(haamData.title)}</h2>
+                    ${haamData.imgUrl ? `<div style="border-radius: 15px; margin: 0 auto; width: 100%;"><a href="${escapeHtml(haamData.joinUrl)}" target="_blank" style="text-decoration: none;"><img src="${escapeHtml(haamData.imgUrl)}" alt="HAAM Membership" style="width: 100%; border-radius: 10px;"></a></div><br><br>` : ''}
+                    <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; text-align: center;">${escapeHtml(haamData.text)}</p>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 20px auto;">
+                      <tr>
+                        <td style="text-align: center;">
+                          <a href="${escapeHtml(haamData.joinUrl)}" target="_blank" style="display: inline-block; background-color: #ffe94f; color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 700; text-decoration: none; text-transform: uppercase; padding: 15px 40px; border-radius: 25px;">Join HAAM Today</a>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; line-height: 1.6; margin: 25px 0 15px 0; text-align: center;">Bonus karma points if you share one of the HAAM social media posts about Open Enrollment:</p>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 300px; margin: 0 auto 25px auto;">
+                      <tr>
+                        <td style="padding: 0 10px; text-align: center;">
+                          <a href="${escapeHtml(haamData.instagramUrl)}" target="_blank" style="display: inline-block; background-color: #ffe94f; color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 10px 20px; border-radius: 20px;">Instagram</a>
+                        </td>
+                        <td style="padding: 0 10px; text-align: center;">
+                          <a href="${escapeHtml(haamData.facebookUrl)}" target="_blank" style="display: inline-block; background-color: #ffe94f; color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 10px 20px; border-radius: 20px;">Facebook</a>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; line-height: 1.6; margin: 25px 0 0 0; text-align: center; font-style: italic;">Your support helps ensure Austin musicians get the healthcare they need. Together, we can make a difference in our music community!</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        `;
+      }
+
+      if (sec.type === 'artist_voices') {
+        return `
+          <tr>
+            <td style="padding: 0 0 20px 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: ${artistVoicesWall.bgColor}; border-radius: 15px;">
+                <tr>
+                  <td style="padding: 30px; text-align: center;">
+                    <h2 style="color: ${artistVoicesWall.textColor}; font-family: 'Poppins', Arial, sans-serif; font-size: 24px; font-weight: 900; line-height: 1.2; margin: 0 0 20px 0; text-align: center; text-transform: uppercase;">ARTIST VOICES WALL</h2>
+                    ${artistVoicesWall.imgUrl ? `<div style="border-radius: 15px; margin: 0 auto 20px auto; width: 100%;"><img src="${escapeHtml(artistVoicesWall.imgUrl)}" style="width: 100%; border-radius: 10px;" alt="Artist Voices Wall"></div>` : ''}
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 20px auto 0 auto;">
+                      <tr>
+                        <td style="text-align: center;">
+                          <a href="https://prosperxo.com/surveys/" target="_blank" style="display: inline-block; background-color: #ffe94f; color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 700; text-decoration: none; text-transform: uppercase; padding: 15px 40px; border-radius: 25px;">SHARE YOUR VOICE HERE</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        `;
+      }
+
+      if (sec.type === 'fuel_journey') {
+        const textLinesHtml = fuelForJourney.textLines
+          .filter(l => l.trim() !== '')
+          .map(l => `<p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; text-align: center;">${escapeHtml(l)}</p>`)
+          .join('');
+
+        const quoteHtml = fuelForJourney.quote ? `
+          <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 18px; line-height: 1.5; margin: 20px 0 10px 0; text-align: center; font-style: italic;">${escapeHtml(fuelForJourney.quote)}</p>
+          ${fuelForJourney.quoteAuthor ? `<p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; line-height: 1.5; margin: 0 0 25px 0; text-align: center;">— ${escapeHtml(fuelForJourney.quoteAuthor)}</p>` : ''}
+        ` : '';
+
+        return `
+          <tr>
+            <td style="padding: 0 0 20px 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #010101; border-radius: 15px;">
+                <tr>
+                  <td style="padding: 30px; text-align: center;">
+                    <h2 style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 24px; font-weight: 900; line-height: 1.2; margin: 0 0 25px 0; text-align: center; text-transform: uppercase; letter-spacing: 2px;">Fuel for the Journey</h2>
+                    ${textLinesHtml}
+                    ${quoteHtml}
+                    <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; line-height: 1.6; margin: 20px 0 20px 0; text-align: center;">
+                      At Prosper XO, everything we do comes back to uplifting creators and making the industry more just. Thank you for being part of this journey with Prosper XO.
+                    </p>
+                    <p style="color: #ffffff; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; line-height: 1.6; margin: 0; text-align: center;">
+                      Let's continue to inspire change, uplift each other, and remind the world that artists deserve nothing less than respect, ownership, and prosperity. When artists prosper, culture thrives – and we're building that future together. ❤️
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        `;
+      }
+
+      if (sec.type === 'custom') {
+        const cData = customSectionsData[sec.id] || {
+          title: 'New Section',
+          bgColor: '#1d00c2',
+          textColor: '#ffffff',
+          img: '',
+          text: '',
+          links: []
+        };
+
+        const validLinks = (cData.links || []).filter(l => l.url && l.url.trim() !== '');
+        const buttonsHtml = validLinks.map(link => `
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 15px auto 0 auto;">
+            <tr>
+              <td style="text-align: center;">
+                <a href="${escapeHtml(link.url)}" target="_blank" style="display: inline-block; background-color: #ffe94f; color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 700; text-decoration: none; text-transform: uppercase; padding: 14px 35px; border-radius: 25px;">${escapeHtml(link.label || 'Learn More')}</a>
+              </td>
+            </tr>
+          </table>
+        `).join('');
+
+        const textColor = cData.textColor || '#ffffff';
+
+        return `
+          <tr>
+            <td style="padding: 0 0 20px 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: ${cData.bgColor}; border-radius: 15px;">
+                <tr>
+                  <td style="padding: 30px; text-align: center;">
+                    ${cData.title ? `<h2 style="color: ${textColor}; font-family: 'Poppins', Arial, sans-serif; font-size: 24px; font-weight: 900; line-height: 1.2; margin: 0 0 20px 0; text-align: center; text-transform: uppercase;">${escapeHtml(cData.title)}</h2>` : ''}
+                    ${cData.img ? `<div style="border-radius: 15px; margin: 0 auto 20px auto; width: 100%;"><img src="${escapeHtml(cData.img)}" style="width: 100%; border-radius: 10px;" alt="${escapeHtml(cData.title || 'Section Image')}"></div>` : ''}
+                    ${cData.text ? `<p style="color: ${textColor}; font-family: 'Poppins', Arial, sans-serif; font-size: 16px; line-height: 1.6; margin: 0; text-align: center;">${escapeHtml(cData.text)}</p>` : ''}
+                    ${buttonsHtml}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        `;
+      }
+
+      return '';
+    }
+
+    function getOutputHTML() {
+      const sectionsHtml = activeSections.map(sec => renderSectionHTML(sec)).join('\n');
+
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>XO Insider Newsletter</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4;">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f4f4f4;">
+    <tr>
+        <td align="center">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600"
+                style="max-width: 600px; width: 100%; background-color: #f4f4f4;">
+
+${sectionsHtml}
+
+                <!-- Footer Section -->
+                <tr>
+                    <td style="padding: 40px 20px; text-align: center;">
+                        <h3 style="color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 24px; font-weight: 900; margin: 0 0 30px 0; text-transform: uppercase; letter-spacing: 1px;">
+                            Follow Us
+                        </h3>
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto 30px auto;">
+                            <tr>
+                                <td style="text-align: center;">
+                                    <a href="https://fb.com/prosperxoxo" target="_blank" style="display: inline-block; margin: 0 15px;">
+                                        <img src="https://243102463.fs1.hubspotusercontent-na2.net/hubfs/243102463/logo-fb.png" alt="Facebook" style="width: 40px; height: 40px; border-radius: 20px;" width="40" height="40">
+                                    </a>
+                                    <a href="https://instagram.com/prosperxo" target="_blank" style="display: inline-block; margin: 0 15px;">
+                                        <img src="https://243102463.fs1.hubspotusercontent-na2.net/hubfs/243102463/logo-ig.png" alt="Instagram" style="width: 40px; height: 40px; border-radius: 20px;" width="40" height="40">
+                                    </a>
+                                    <a href="https://www.tiktok.com/@prosper_xo_" target="_blank" style="display: inline-block; margin: 0 15px;">
+                                        <img src="https://243102463.fs1.hubspotusercontent-na2.net/hubfs/243102463/logo-tiktok.png" alt="TikTok" style="width: 40px; height: 40px; border-radius: 20px;" width="40" height="40">
+                                    </a>
+                                    <a href="https://www.youtube.com/@prosperxo" target="_blank" style="display: inline-block; margin: 0 15px;">
+                                        <img src="https://243102463.fs1.hubspotusercontent-na2.net/hubfs/243102463/logo-youtube.png" alt="YouTube" style="width: 40px; height: 40px; border-radius: 20px;" width="40" height="40">
+                                    </a>
+                                    <a href="https://www.linkedin.com/company/prosper-xo/" target="_blank" style="display: inline-block; margin: 0 15px;">
+                                        <img src="https://243102463.fs1.hubspotusercontent-na2.net/hubfs/243102463/logo-linkedin.png" alt="LinkedIn" style="width: 40px; height: 40px; border-radius: 20px;" width="40" height="40">
+                                    </a>
+                                    <a href="https://x.com/prosperxoxoxo" target="_blank" style="display: inline-block; margin: 0 15px;">
+                                        <img src="https://243102463.fs1.hubspotusercontent-na2.net/hubfs/243102463/logo-x.png" alt="X" style="width: 40px; height: 40px; border-radius: 20px;" width="40" height="40">
+                                    </a>
+                                </td>
+                            </tr>
+                        </table>
+                        <p style="color: #000000; font-family: 'Poppins', Arial, sans-serif; font-size: 14px; line-height: 1.5; margin: 0 0 30px 0; text-align: center;">
+                            XO Insider is your monthly update from Prosper XO. Stay tuned for more spotlights, events, and resources in our next issue. Until then, keep creating and keep shining!
+                        </p>
+                        <p style="color: #666666; font-family: 'Poppins', Arial, sans-serif; font-size: 12px; line-height: 1.4; margin: 0 0 10px 0; text-align: center;">
+                            <a href="{{webversion}}" target="_blank" style="color: #4390da; ">View email in browser</a>
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>`;
+    }
+
+    // Direct, reliable iframe update using srcdoc
+    function updatePreview() {
+      const htmlContent = getOutputHTML();
+      const iframe = document.getElementById('preview-frame');
+      if (iframe) {
+        iframe.srcdoc = htmlContent;
+      }
+    }
+
+    function downloadHTML() {
+      const blob = new Blob([getOutputHTML()], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'xo_insider_newsletter.html';
+      a.click();
+    }
+
+    function copyHTML() {
+      navigator.clipboard.writeText(getOutputHTML()).then(() => {
+        const status = document.getElementById('status-text');
+        status.innerText = 'Copied to Clipboard!';
+        status.style.color = '#ffe94f';
+        setTimeout(() => {
+          status.innerText = 'Ready';
+          status.style.color = '#94a3b8';
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
